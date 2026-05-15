@@ -42,7 +42,7 @@ El script instala las dependencias de compilación automáticamente, pero tambi�
 sudo apt install build-essential libncurses-dev bison flex \
   libssl-dev libelf-dev bc python3 cpio xz-utils \
   python3-requests python3-pip linux-headers-$(uname -r) \
-  gcc debhelper libdw-dev rsync dwarves
+  gcc debhelper libdw-dev rsync dwarves gawk
 ```
 
 ---

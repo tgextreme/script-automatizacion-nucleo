@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import subprocess
 import requests
 import tarfile
@@ -161,6 +162,39 @@ def prepare_config():
 
 
 # =========================================================
+# LIMPIAR CERTIFICADOS DE CONFIG
+# =========================================================
+
+def fix_cert_config():
+    """
+    Elimina referencias a certificados que no existen en el árbol fuente vanilla.
+    """
+
+    print("\n[+] Limpiando referencias a certificados en .config...")
+
+    config_file = SOURCE_DIR / ".config"
+
+    with open(config_file, "r") as f:
+        content = f.read()
+
+    content = re.sub(
+        r'CONFIG_SYSTEM_TRUSTED_KEYS="[^"]*"',
+        'CONFIG_SYSTEM_TRUSTED_KEYS=""',
+        content
+    )
+    content = re.sub(
+        r'CONFIG_SYSTEM_REVOCATION_KEYS="[^"]*"',
+        'CONFIG_SYSTEM_REVOCATION_KEYS=""',
+        content
+    )
+
+    with open(config_file, "w") as f:
+        f.write(content)
+
+    print("[+] Certificados eliminados de la configuración")
+
+
+# =========================================================
 # ACTUALIZAR CONFIG
 # =========================================================
 
@@ -191,7 +225,12 @@ def build_kernel():
     print(f"\n[+] Compilando usando {cores} núcleos...\n")
 
     run_command(
-        ["make", f"-j{cores}"],
+        [
+            "make",
+            f"-j{cores}",
+            "CONFIG_SYSTEM_TRUSTED_KEYS=",
+            "CONFIG_SYSTEM_REVOCATION_KEYS="
+        ],
         cwd=SOURCE_DIR
     )
 
@@ -210,7 +249,7 @@ def install_build_deps():
     deps = [
         "build-essential", "libncurses-dev", "bison", "flex",
         "libssl-dev", "libelf-dev", "bc", "cpio", "xz-utils",
-        "debhelper", "libdw-dev", "rsync", "dwarves"
+        "debhelper", "libdw-dev", "rsync", "dwarves", "gawk"
     ]
 
     run_command(["sudo", "apt", "install", "-y"] + deps)
@@ -234,7 +273,9 @@ def build_deb():
             "make",
             f"-j{cores}",
             "bindeb-pkg",
-            f"KDEB_PKGVERSION={KERNEL_FULL_VERSION}-custom"
+            f"KDEB_PKGVERSION={KERNEL_FULL_VERSION}-custom",
+            "CONFIG_SYSTEM_TRUSTED_KEYS=",
+            "CONFIG_SYSTEM_REVOCATION_KEYS="
         ],
         cwd=SOURCE_DIR
     )
@@ -294,6 +335,7 @@ def main():
         print(f"[+] Fuentes ya extraídas: {SOURCE_DIR}")
 
     prepare_config()
+    fix_cert_config()
     update_config()
     build_kernel()
     build_deb()
